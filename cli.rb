@@ -36,7 +36,7 @@ class Cli < Thor
       exit 1
     else
       @cluster = Cluster.instance
-      @cluster.add(type, 2) do |status, tick, not_ready, requested|
+      @cluster.add(type, number.to_i) do |status, tick, not_ready, requested|
         case status
         when :creating
           puts "Creating #{type}..."
@@ -46,10 +46,7 @@ class Cli < Thor
           puts "##{tick}: Waiting for #{not_ready} of #{requested}..." 
         when :started
           puts "Ready!"
-          puts "masters:"
-          puts @cluster.generate_masters_file
-          puts "#{type}:"
-          puts @cluster.generate_slaves_file
+          refresh
         end
       end
       exit 0
