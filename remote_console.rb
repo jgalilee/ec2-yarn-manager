@@ -1,4 +1,5 @@
 require 'net/ssh'
+require 'net/scp'
 
 class RemoteConsole
 
@@ -16,6 +17,12 @@ class RemoteConsole
         yield :error, e and return
       end
       yield :success, result
+    end
+  end
+
+  def upload(local_path, remote_path)
+    @ssh.scp.upload!(local_path, remote_path) do |ch, name, sent, total|
+      yield "#{name}: #{sent}/#{total}" if block_given?
     end
   end
 

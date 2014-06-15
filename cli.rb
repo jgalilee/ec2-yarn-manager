@@ -58,13 +58,25 @@ class Cli < Thor
 
   desc 'refresh master-id',
     'Refreshes the slaves and masters files on the root master node.'
-  def refresh(master_id)
-    @cluster.generate_slaves_file
-    @cluster.generate_masters_file
-    Net::SCP.start(host, login) do |scp|
-      puts 'SCP Started!'
-      scp.download('/usr/share/ruby.rb', '.')
-    end
+  def refresh
+    @cluster = Cluster.instance
+    say "Requesting masters information...", :yellow
+    @master = @cluster.masters.first
+    @ip = @master.public_ip_address
+    say "Refreshing masters file"
+    say @cluster.generate_masters_file.to_yaml
+    say "Refreshing slaves file"
+    say @cluster.generate_slaves_file.to_yaml
+    say "Started managed session with #{@ip}.", :green
+    console = @cluster.console_for @master
+    say "Uploading 'slaves'", :cyan
+    console.upload("./slaves", "/home/ec2-user/") { |status| say status }
+    say "Uploading 'masters'", :cyan
+    console.upload("./masters", "/home/ec2-user/") { |status| say status }
+    say "Upload refresh script", :cyan
+    console.upload("./refresh.sh", "/home/ec2-user/refresh.sh") { |status| say status }
+    say "Running refresh script on master", :cyan
+    handle_console_command console, './refresh.sh'
   end
 
   desc 'interact instance-id',
@@ -74,9 +86,19 @@ class Cli < Thor
     say "Requesting masters information...", :yellow
     @master = @cluster.masters.first
     @ip = @master.public_ip_address
-    say "Started interactive console with #{@ip}, type '!' to exit.", :green
-    console = @cluster.console_for @master 
+    console = @cluster.console_for @master
+    say "Started interactive session with #{@ip}, type '!' to exit.", :green
     while (command = ask(">").strip) != '!'
+      handle_console_command console, command
+    end
+    say "Done", :magenta
+    exit 0
+  end
+
+private
+
+  def handle_console_command(console, command)
+    unless "" == command
       console.run command do |status, message|
         case status
         when :success
@@ -84,10 +106,8 @@ class Cli < Thor
         when :error
           say message, :red
         end
-      end unless "" == command
+      end 
     end
-    say "Done", :magenta
-    exit 0
   end
 
 end
