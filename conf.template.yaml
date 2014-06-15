@@ -1,0 +1,58 @@
+# Timeout for refresh checking based actions
+# such as adding nodes.
+:timeout: 1
+# Information for establishing SSH connections
+# with nodes.
+:console:
+  # Username of EC2 nodes, e.g. EC2-user
+  :user: <user>
+  :keys:
+    # Username of EC2 nodes, e.g. EC2-user
+    - /home/<username>/.ssh/<key.pem>
+# Tags for identifying EC2 nodess
+:tags:
+  :cluster: yarn
+  :masters: master
+  :slaves: slave
+# Scaffolds defining how EC2 nodes are built
+:scaffolds:
+  :masters:
+    :image_id: ami-6805f900
+    :monitoring_enabled: true
+    :key_name: aws-east
+    :security_groups:
+      -ganglia
+      -yarn-cluster
+    :instance_type: t1.micro
+    :block_device_mappings:
+      -
+        :device_name: /dev/sda1
+        :ebs:
+          :volume_size: 6
+          :volume_type: standard
+    # Added after the nodes are made, not supported
+    # natively by AWS SDK.
+    :tags:
+      - Name: yarn-managed-master
+      - yarn: master
+      - ganglia: node
+  :slaves:
+    :image_id: ami-6805f900
+    :monitoring_enabled: true
+    :key_name: aws-east
+    :security_groups:
+      - ganglia
+      - yarn-cluster
+    :instance_type: t1.micro
+    :block_device_mappings:
+      -
+        :device_name: /dev/sda1
+        :ebs:
+          :volume_size: 6
+          :volume_type: standard
+    # Added after the node is made, not supported
+    # natively by AWS SDK.
+    :tags:
+      - Name: yarn-managed-slave
+      - yarn: slave
+      - ganglia: node
