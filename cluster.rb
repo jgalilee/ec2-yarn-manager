@@ -3,8 +3,8 @@ require 'net/http'
 require 'net/ssh'
 require 'yaml'
 require 'singleton'
-
 require './conf'
+require './remote_console'
 
 class Cluster
   include Singleton
@@ -47,6 +47,10 @@ class Cluster
 
   def status_of(instances)
     overview_of(instances)
+  end
+
+  def console_for(instance)
+    RemoteConsole.connect_with instance.ip_address, @conf.get(:console)
   end
 
 private

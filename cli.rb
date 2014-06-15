@@ -32,7 +32,7 @@ class Cli < Thor
     type = type.to_sym
     valid_types = [:slaves, :masters]
     unless valid_types.include? type
-      say "Invalid type #{type}. Valid types are #{valid_types.join(', ')}."
+      say "Invalid type #{type}. Valid types are #{valid_types.join(', ')}.", :red 
       exit 1
     else
       @cluster = Cluster.instance
@@ -59,7 +59,35 @@ class Cli < Thor
   desc 'refresh master-id',
     'Refreshes the slaves and masters files on the root master node.'
   def refresh(master_id)
+    @cluster.generate_slaves_file
+    @cluster.generate_masters_file
+    Net::SCP.start(host, login) do |scp|
+      puts 'SCP Started!'
+      scp.download('/usr/share/ruby.rb', '.')
+    end
+  end
 
+  desc 'interact instance-id',
+    'SSH exec one or more commands against the instance.'
+  def interact
+    @cluster = Cluster.instance
+    say "Requesting masters information...", :yellow
+    @master = @cluster.masters.first
+    @ip = @master.public_ip_address
+    say "Started interactive console with #{@ip}, type '!' to exit.", :green
+    console = @cluster.console_for @master 
+    while (command = ask(">").strip) != '!'
+      console.run command do |status, message|
+        case status
+        when :success
+          say message
+        when :error
+          say message, :red
+        end
+      end unless "" == command
+    end
+    say "Done", :magenta
+    exit 0
   end
 
 end
